@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>JS PDF</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+        <style>
+            body.barcode__container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                font-family: Arial, sans-serif;
+                background-color: #f5f5f5;
+            }
+
+            body.barcode__container,
+            body.barcode__container::after,
+            body.barcode__container::before {
+                padding: 0;
+                margin: 0;
+                box-sizing: border-box;
+            }
+
+            body.barcode__container .container {
+                background-color: #fff;
+                padding: 20px;
+                border-radius: 5px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                width: 100%;
+                max-width: 400px;
+            }
+
+            .radio-inputs {
+                position: relative;
+                display: flex;
+                flex-wrap: wrap;
+                border-radius: 0.5rem;
+                background-color: #eee;
+                box-sizing: border-box;
+                box-shadow: 0 0 0px 1px rgba(0, 0, 0, 0.06);
+                padding: 0.25rem;
+                width: 100%;
+                margin-bottom: 40px;
+                font-size: 14px;
+            }
+
+            .radio-inputs .radio {
+                flex: 1 1 auto;
+                text-align: center;
+            }
+
+            .radio-inputs .radio input {
+                display: none;
+            }
+
+            .radio-inputs .radio .name {
+                display: flex;
+                cursor: pointer;
+                align-items: center;
+                justify-content: center;
+                border-radius: 0.5rem;
+                border: none;
+                padding: 0.5rem 0;
+                color: rgba(51, 65, 85, 1);
+                transition: all 0.15s ease-in-out;
+            }
+
+            .radio-inputs .radio input:checked + .name {
+                background-color: #fff;
+                font-weight: 600;
+            }
+
+            #InputsContainer {
+                display: flex;
+                flex-direction: column;
+                margin-bottom: 10px;
+                width: 100%;
+                max-width: 400px;
+            }
+
+            #InputsContainer #Input {
+                display: flex;
+                flex-direction: column;
+                margin-bottom: 10px;
+            }
+
+            #InputsContainer #Input label {
+                font-size: 14px;
+                font-weight: 500;
+                margin-bottom: 5px;
+                text-transform: uppercase;
+            }
+
+            #InputsContainer #Input input {
+                padding: 10px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+            }
+
+            button {
+                padding: 14px;
+                background-color: #007bff;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 16px;
+                font-weight: 500;
+                text-transform: uppercase;
+                margin-top: 20px;
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body class="barcode__container">
+        <div class="container">
+            <div class="radio-inputs">
+                <label class="radio">
+                    <input type="radio" value="qrcode" name="radio" />
+                    <span class="name">Qr Code</span>
+                </label>
+                <label class="radio">
+                    <input type="radio" value="barcode" name="radio" />
+                    <span class="name">Barcode</span>
+                </label>
+            </div>
+            <div id="InputsContainer">
+                <div id="Input">
+                    <label for="labelText">Label</label>
+                    <input
+                        type="text"
+                        id="labelText"
+                        placeholder="Enter a label"
+                    />
+                </div>
+
+                <div id="Input">
+                    <label for="value">value</label>
+                    <input type="text" id="value" placeholder="Enter a value" />
+                </div>
+                <div id="Input">
+                    <label for="copies">Number of copies:</label>
+                    <input
+                        type="number"
+                        id="copies"
+                        placeholder="Enter number of copies"
+                    />
+                </div>
+                <button onclick="generatePDF()">Download PDF</button>
+            </div>
+        </div>
+
+        <script>
+            function generatePDF() {
+                const width = 200;
+                const height = 100;
+                const qrSize = 100;
+                const labelText = document.getElementById("labelText").value;
+                // GET THE CHECKED INPUT RADIO VALUE
+                const radioValue = document.querySelector(
+                    'input[name="radio"]:checked'
+                ).value;
+
+                const valueValue = document.getElementById("value").value;
+                const copies = parseInt(
+                    document.getElementById("copies").value
+                );
+
+                if (!valueValue) {
+                    alert("Please enter a value.");
+                    return;
+                }
+
+                if (copies <= 0 || isNaN(copies)) {
+                    alert("Please enter a valid number of copies.");
+                    return;
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({
+                    orientation: "landscape",
+                    unit: "px",
+                    format: [width, height],
+                });
+
+                // ADD FONT SUPPORT ARABIC
+                const fonts = doc.getFontList();
+                doc.addFileToVFS("Almarai.ttf", fonts["Almarai"]);
+                doc.addFont("Almarai.ttf", "Almarai", "normal");
+                doc.setFont("Almarai");
+
+                // generate qr code function
+                const generateQRCode = (value) => {
+                    // Generate QR code
+                    const qr = new QRious({
+                        value: valueValue,
+                        size: qrSize, // Adjust size as needed
+                    });
+                    // ADD THE LABEL
+                    doc.setFontSize(16);
+                    doc.text(labelText, 15, 20);
+
+                    // Add QR code to the PDF
+                    const qrImageData = qr.toDataURL();
+                    doc.addImage(qrImageData, "PNG", 10, 30, 50, 50);
+
+                    // Save PDF with specified number of copies
+                    for (let i = 1; i < copies; i++) {
+                        // Add a new page for each copy
+                        doc.addPage();
+
+                        // ADD THE LABEL
+                        doc.setFontSize(16);
+                        doc.text(labelText, 15, 20);
+
+                        // Add QR code to the new page
+                        doc.addImage(qrImageData, "PNG", 10, 30, 50, 50);
+                    }
+
+                    // MAKE A UNIQUE FILE NAME FROM THE LABEL TEXT + DATE + NUMBER OF COPIES
+                    const fileName = `QR_${labelText}_${new Date().toISOString()}_${copies}_copies.pdf`;
+
+                    // Save the PDF
+                    doc.save(fileName);
+                };
+
+                // generate barcode function
+                const generateBarcode = (value) => {
+                    // Add the label
+                    doc.setFontSize(16);
+                    doc.text(labelText, 15, 20);
+
+                    // Generate barcode image
+                    const canvas = document.createElement("canvas");
+                    JsBarcode(canvas, value, {
+                        format: "CODE128",
+                        width: 1,
+                        height: 25,
+                        displayValue: false,
+                    });
+
+                    // Convert canvas to data URL
+                    const barcodeImageData = canvas.toDataURL();
+
+                    // Add the barcode to the PDF
+                    doc.addImage(barcodeImageData, "PNG", 10, 30, 150, 50); // Adjust position and size as needed
+
+                    // Save PDF with specified number of copies
+                    for (let i = 1; i < copies; i++) {
+                        // Add a new page for each copy
+                        doc.addPage();
+
+                        // Add the label
+                        doc.setFontSize(16);
+                        doc.text(labelText, 15, 20);
+
+                        // Add the barcode to the new page
+                        doc.addImage(barcodeImageData, "PNG", 10, 30, 150, 50); // Adjust position and size as needed
+                    }
+
+                    // MAKE A UNIQUE FILE NAME FROM THE LABEL TEXT + DATE + NUMBER OF COPIES
+                    const fileName = `BAR_${labelText}_${new Date().toISOString()}_${copies}_copies.pdf`;
+
+                    // Save the PDF
+                    doc.save(fileName);
+                };
+
+                // Call the appropriate function based on the radio input
+                if (radioValue === "qrcode") {
+                    generateQRCode(valueValue);
+                } else {
+                    generateBarcode(valueValue);
+                }
+            }
+        </script>
+    </body>
+</html>
