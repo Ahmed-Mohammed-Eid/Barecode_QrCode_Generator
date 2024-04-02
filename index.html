@@ -75,6 +75,11 @@
                 font-weight: 600;
             }
 
+            #InputsGroup {
+                display: flex;
+                gap: 10px;
+            }
+
             #InputsContainer {
                 display: flex;
                 flex-direction: column;
@@ -87,6 +92,7 @@
                 display: flex;
                 flex-direction: column;
                 margin-bottom: 10px;
+                width: 100%;
             }
 
             #InputsContainer #Input label {
@@ -120,7 +126,7 @@
         <div class="container">
             <div class="radio-inputs">
                 <label class="radio">
-                    <input type="radio" value="qrcode" name="radio" />
+                    <input type="radio" value="qrcode" name="radio" checked="" />
                     <span class="name">Qr Code</span>
                 </label>
                 <label class="radio">
@@ -148,27 +154,85 @@
                         type="number"
                         id="copies"
                         placeholder="Enter number of copies"
+                        min="1"
+                        max="1000"
                     />
                 </div>
+
+                <!-- WIDTH AND HEIGHT -->
+                <div id="InputsGroup">
+                    <div id="Input">
+                        <label for="width">Width (CM):</label>
+                        <input
+                            type="number"
+                            id="width"
+                            placeholder="Enter width"
+                            max="50"
+                        />
+                    </div>
+                    <div id="Input">
+                        <label for="height">Height (CM):</label>
+                        <input
+                            type="number"
+                            id="height"
+                            placeholder="Enter height"
+                            max="50"
+                        />
+                    </div>
+                </div>
+
                 <button onclick="generatePDF()">Download PDF</button>
             </div>
         </div>
 
         <script>
+
+            // ON INPUT COPIES CHANGE VALIDATE THE INPUT TO BE MIN 1 AND MAX 1000
+            document.getElementById("copies").addEventListener("change", function () {
+                const value = parseInt(this.value);
+                if (value < 1) {
+                    this.value = 1;
+                } else if (value > 1000) {
+                    this.value = 1000;
+                }
+            });
+            // handler function to check if the label chracters is english or arabic
+            function isEnglish(str) {
+                const testRegex = /^[a-zA-Z0-9!@#\$%\^\&*\)\(+=._-]+$/;
+                return testRegex.test(str);
+            }
+
+            // handler function to generate the pdf
             function generatePDF() {
-                const width = 200;
-                const height = 100;
+                const width = document.getElementById("width").value;
+                const height = document.getElementById("height").value;
                 const qrSize = 100;
                 const labelText = document.getElementById("labelText").value;
                 // GET THE CHECKED INPUT RADIO VALUE
                 const radioValue = document.querySelector(
                     'input[name="radio"]:checked'
-                ).value;
+                )?.value;
 
                 const valueValue = document.getElementById("value").value;
                 const copies = parseInt(
                     document.getElementById("copies").value
                 );
+
+                // TYPE CHECKING
+                if (!radioValue) {
+                    alert("Please select a type.");
+                    return;
+                }
+
+                if (!labelText) {
+                    alert("Please enter a label.");
+                    return;
+                }
+
+                if (!width || !height) {
+                    alert("Please enter width and height.");
+                    return;
+                }
 
                 if (!valueValue) {
                     alert("Please enter a value.");
@@ -183,7 +247,7 @@
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF({
                     orientation: "landscape",
-                    unit: "px",
+                    unit: "cm",
                     format: [width, height],
                 });
 
@@ -200,25 +264,60 @@
                         value: valueValue,
                         size: qrSize, // Adjust size as needed
                     });
-                    // ADD THE LABEL
-                    doc.setFontSize(16);
-                    doc.text(labelText, 15, 20);
+
+                    // MAKE THE LABEL TEXT DIRECTION RTL IF IT CONTAINS ARABIC CHARACTERS
+                    if (!isEnglish(labelText)) {
+                        doc.setFontSize(12);
+                        doc.text(
+                            labelText,
+                            width - .5,
+                            .5,
+                            null,
+                            null,
+                            "right"
+                        );
+                    } else {
+                        doc.setFontSize(12);
+                        doc.text(labelText, .5, .5);
+                    }
+
+                    // ADD THE NUMBER OF THE COPIES IN THE RIGHT BOTTOM CORNER
+                    doc.setFontSize(10);
+                    doc.text(`1`, (width - .5), (height - .5));
 
                     // Add QR code to the PDF
                     const qrImageData = qr.toDataURL();
-                    doc.addImage(qrImageData, "PNG", 10, 30, 50, 50);
+                    doc.addImage(qrImageData, "PNG", 1, 1, ((height / 3) * 1.8), ((height / 3) * 1.8)); // Adjust position and size as needed
 
                     // Save PDF with specified number of copies
                     for (let i = 1; i < copies; i++) {
                         // Add a new page for each copy
                         doc.addPage();
 
-                        // ADD THE LABEL
-                        doc.setFontSize(16);
-                        doc.text(labelText, 15, 20);
+                        // MAKE THE LABEL TEXT DIRECTION RTL IF IT CONTAINS ARABIC CHARACTERS
+                        console.log(isEnglish(labelText));
+                        if (!isEnglish(labelText)) {
+                            doc.setFontSize(12);
+                            doc.text(
+                                labelText,
+                                width - .5,
+                                .5,
+                                null,
+                                null,
+                                "right"
+                            );
+                        } else {
+                            console.log("here in else");
+                            doc.setFontSize(12);
+                            doc.text(labelText, .5, .5);
+                        }
+
+                        // ADD THE NUMBER OF THE COPIES IN THE RIGHT BOTTOM CORNER
+                        doc.setFontSize(10);
+                        doc.text(`${i + 1}`, (width - .5), (height - .5));
 
                         // Add QR code to the new page
-                        doc.addImage(qrImageData, "PNG", 10, 30, 50, 50);
+                        doc.addImage(qrImageData, "PNG", 1, 1, ((height / 3) * 1.8), ((height / 3) * 1.8)); // Adjust position and size as needed
                     }
 
                     // MAKE A UNIQUE FILE NAME FROM THE LABEL TEXT + DATE + NUMBER OF COPIES
@@ -230,9 +329,26 @@
 
                 // generate barcode function
                 const generateBarcode = (value) => {
-                    // Add the label
-                    doc.setFontSize(16);
-                    doc.text(labelText, 15, 20);
+
+                    // MAKE THE LABEL TEXT DIRECTION RTL IF IT CONTAINS ARABIC CHARACTERS
+                    if (!isEnglish(labelText)) {
+                        doc.setFontSize(12);
+                        doc.text(
+                            labelText,
+                            width - .5,
+                            .5,
+                            null,
+                            null,
+                            "right"
+                        );
+                    } else {
+                        doc.setFontSize(12);
+                        doc.text(labelText, .5, .5);
+                    }
+
+                    // ADD THE NUMBER OF THE COPIES IN THE RIGHT BOTTOM CORNER
+                    doc.setFontSize(10);
+                    doc.text(`1`, (width - .5), (height - .5));
 
                     // Generate barcode image
                     const canvas = document.createElement("canvas");
@@ -247,19 +363,35 @@
                     const barcodeImageData = canvas.toDataURL();
 
                     // Add the barcode to the PDF
-                    doc.addImage(barcodeImageData, "PNG", 10, 30, 150, 50); // Adjust position and size as needed
+                    doc.addImage(barcodeImageData, "PNG", .3, 1, ((width / 3) * 2.7), (height / 3)); // Adjust position and size as needed
 
                     // Save PDF with specified number of copies
                     for (let i = 1; i < copies; i++) {
                         // Add a new page for each copy
                         doc.addPage();
 
-                        // Add the label
-                        doc.setFontSize(16);
-                        doc.text(labelText, 15, 20);
+                        // MAKE THE LABEL TEXT DIRECTION RTL IF IT CONTAINS ARABIC CHARACTERS
+                        if (!isEnglish(labelText)) {
+                            doc.setFontSize(12);
+                            doc.text(
+                                labelText,
+                                width - .5,
+                                .5,
+                                null,
+                                null,
+                                "right"
+                            );
+                        } else {
+                            doc.setFontSize(12);
+                            doc.text(labelText, .5, .5, null, null, "left");
+                        }
+
+                        // ADD THE NUMBER OF THE COPIES IN THE RIGHT BOTTOM CORNER
+                        doc.setFontSize(10);
+                        doc.text(`${i + 1}`, (width - .5), (height - .5));
 
                         // Add the barcode to the new page
-                        doc.addImage(barcodeImageData, "PNG", 10, 30, 150, 50); // Adjust position and size as needed
+                        doc.addImage(barcodeImageData, "PNG", .3, 1, ((width / 3) * 2.7), (height / 3)); // Adjust position and size as needed
                     }
 
                     // MAKE A UNIQUE FILE NAME FROM THE LABEL TEXT + DATE + NUMBER OF COPIES
